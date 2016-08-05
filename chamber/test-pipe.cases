@@ -1,0 +1,5 @@
+case-pipe.sh -.tar test.tar
+case-pipe.sh -.tar.gz test.tar.gz
+case-pipe.sh -.tar.bz2 test.tar.bz2
+case-pipe.sh -.tar.xz test.tar.xz
+case-pipe.sh -.tar.Z test.tar.Z
