@@ -87,7 +87,7 @@ unpack () {
     fi
 
     # need "unrar", check if "unrar" installed
-    if [ "$format" = 'unrar' ] && ! $(command -v unrar 2>&1 >/dev/null); then
+    if [ "$format" = 'rar' ] && ! $(command -v unrar 2>&1 >/dev/null); then
         echo 'The "unrar" utility is not installed'
         unset afile
         unset format
