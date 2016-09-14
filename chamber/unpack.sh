@@ -46,6 +46,7 @@ unpack () {
         *.zip)      format='zip' ;;
         *.7z)       format='7z' ;;
         *.rar)      format='rar' ;;
+        *.jar)      format='tar' ;;
         *)
             echo "Don't know how to unpack \"$afile\""
             unset afile
@@ -187,6 +188,7 @@ unpack_help () {
     echo '  *.tar'
     echo '  *.tar.bz, *.tar.bz2, *.tbz, *.tbz2'
     echo '  *.tar.gz, *.tgz'
+    echo '  *.jar'
 
     if command -v unxz 2>&1 >/dev/null; then
         echo '  *.tar.xz'
