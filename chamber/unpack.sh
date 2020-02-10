@@ -1,3 +1,6 @@
+#!/usr/bin/env sh
+
+
 unpack () {
     # unpack -h
     # unpack [-c] archive-file
@@ -15,12 +18,18 @@ unpack () {
         clean=0
     fi
 
-    if [ $# -ne 1 ]; then
-        echo 'Multiple file is not supported'
-        echo ''
+    if [ $# -lt 1 ]; then
         unpack_help
         unset clean
         return 1
+    fi
+
+    if [ $# -gt 1 ]; then
+        while [ $# -gt 0 ]; do
+            unpack "$1"
+            shift
+        done
+        return
     fi
 
     afile="$1"
@@ -70,7 +79,7 @@ unpack () {
     fi
 
     # need "zip", check if "zip" installed
-    if [ "$format" = 'zip' ] && ! $(command -v zip 2>&1 >/dev/null); then
+    if [ "$format" = 'zip' ] && ! command -v zip >/dev/null 2>&1; then
         echo 'The "zip" utility is not installed'
         unset afile
         unset format
@@ -79,7 +88,7 @@ unpack () {
     fi
 
     # need "7z", check if "7z" installed
-    if [ "$format" = '7z' ] && ! $(command -v 7z 2>&1 >/dev/null); then
+    if [ "$format" = '7z' ] && ! command -v 7z >/dev/null 2>&1; then
         echo 'The "7z" utility is not installed'
         unset afile
         unset format
@@ -88,7 +97,7 @@ unpack () {
     fi
 
     # need "unrar", check if "unrar" installed
-    if [ "$format" = 'rar' ] && ! $(command -v unrar 2>&1 >/dev/null); then
+    if [ "$format" = 'rar' ] && ! command -v unrar >/dev/null 2>&1; then
         echo 'The "unrar" utility is not installed'
         unset afile
         unset format
@@ -154,8 +163,10 @@ unpack () {
         rar)    unrar x "$afile" ;;
     esac
 
+    ret_code=$?
+
     # check if packing succeed
-    if [ "$?" -ne 0 ]; then
+    if [ ${ret_code} -ne 0 ]; then
         unset afile
         unset format
         unset clean
@@ -163,7 +174,7 @@ unpack () {
     fi
 
     # clean up source file if clean bit is set
-    if [ "$?" -eq 0 ] && [ "$clean" -eq 1 ]; then
+    if [ ${ret_code} -eq 0 ] && [ "$clean" -eq 1 ]; then
         rm -r $afile
     fi
 
@@ -190,7 +201,7 @@ unpack_help () {
     echo '  *.tar.gz, *.tgz'
     echo '  *.jar'
 
-    if command -v unxz 2>&1 >/dev/null; then
+    if command -v unxz >/dev/null 2>&1; then
         echo '  *.tar.xz'
         echo '  *.xz'
     else
@@ -198,7 +209,7 @@ unpack_help () {
         echo '  *.xz        - (not available: unxz)'
     fi
 
-    if command -v uncompress 2>&1 >/dev/null; then
+    if command -v uncompress >/dev/null 2>&1; then
         echo '  *.tar.Z'
         echo '  *.Z'
     else
@@ -206,35 +217,36 @@ unpack_help () {
         echo '  *.Z         - (not available: uncompress)'
     fi
 
-    if command -v bunzip2 2>&1 >/dev/null; then
+    if command -v bunzip2 >/dev/null 2>&1; then
         echo '  *.bz, *.bz2'
     else
         echo '  *.bz, *.bz2 - (not available: bunzip2)'
     fi
 
-    if command -v gzip 2>&1 >/dev/null; then
+    if command -v gzip >/dev/null 2>&1; then
         echo '  *.gz'
     else
         echo '  *.gz        - (not available: gzip)'
     fi
 
-    if command -v unzip 2>&1 >/dev/null; then
+    if command -v unzip >/dev/null 2>&1; then
         echo '  *.zip'
     else
         echo '  *.zip       - (not available: unzip)'
     fi
 
-    if command -v 7z 2>&1 >/dev/null; then
+    if command -v 7z >/dev/null 2>&1; then
         echo '  *.7z'
     else
         echo '  *.7z        - (not available: 7z)'
     fi
 
-    if command -v unrar 2>&1 >/dev/null; then
+    if command -v unrar >/dev/null 2>&1; then
         echo '  *.rar'
     else
         echo '  *.rar       - (not available: unrar)'
     fi
 }
 
-unpack $@
+
+unpack "$@"
