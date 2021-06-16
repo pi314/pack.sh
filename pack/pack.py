@@ -11,43 +11,7 @@ from os.path import isfile, isdir, exists, splitext
 from shutil import which
 from types import SimpleNamespace
 
-
-if sys.version_info.major < 3:
-    print('Need Python3')
-    exit(1)
-
-
-def print_stderr(*args, **kwargs):
-    kwargs['file'] = sys.stderr
-    print(*args, **kwargs)
-
-
-def color_str(color):
-    def curry(*s):
-        return '\033[1;3' + str(color) + 'm' + ' '.join(s) + '\033[m'
-
-    return curry
-
-black = color_str(0)
-nocolor = (lambda x: x)
-red = color_str(1)
-green = color_str(2)
-yellow = color_str(3)
-blue = color_str(4)
-magenta = color_str(5)
-cyan = color_str(6)
-white = color_str(7)
-
-
-def log(*args, level='verbose'):
-    if level == 'error':
-        level = red(level)
-
-    print_stderr('(' + level + ')', *args)
-
-
-def log_error(*args):
-    log(*args, level='error')
+from .utils import *
 
 
 dry = False
@@ -303,6 +267,7 @@ def usage():
     print_stderr()
     print_stderr('Supported formats:')
 
+    # argparse.epilog?
     for x in archiver_list:
         print_stderr('  ' + ' / '.join(x.exts) + ('' if not x.lacked_utils else ' (not available: need ' + ', '.join(x.lacked_utils) + ')'))
 
@@ -372,6 +337,9 @@ def parse_args(args):
 
 def main():
     args = parse_args(sys.argv[1:])
+    log('WIP')
+    log(args)
+    exit(0)
 
     def why(x):
         if x.lacked_utils:
