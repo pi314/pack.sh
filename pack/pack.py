@@ -1,17 +1,31 @@
 #!/usr/bin/env python3
 
-import argparse
+import importlib
 import os
 import shlex
 import subprocess as sub
 import sys
 
-from abc import ABCMeta, abstractmethod
 from os.path import isfile, isdir, exists, splitext
-from shutil import which
 from types import SimpleNamespace
 
 from .utils import *
+
+
+archiver_name_list = [
+        'archiver_tar',
+        'archiver_bz2',
+        'archiver_gzip',
+        'archiver_z',
+        'archiver_xz',
+        ]
+
+
+# Initiate archiver classes
+archiver_list = [
+        getattr(importlib.import_module('.' + archiver, package='pack'), archiver)()
+        for archiver in archiver_name_list
+        ]
 
 
 dry = False
@@ -37,222 +51,6 @@ def flush_errors():
         exit(1)
 
 
-def abstract_property(p):
-    return property(abstractmethod(p))
-
-
-class BaseArchiver(metaclass=ABCMeta):
-    @abstract_property
-    def exts(cls):
-        ...
-
-    @abstract_property
-    def utils(cls):
-        ...
-
-    @property
-    def lacked_utils(self):
-        return list(filter(lambda x: which(x) is None, self.utils))
-
-    @property
-    def why(self):
-        if self.lacked_utils:
-            return '(need ' + ', '.join(self.lacked_utils) + ')'
-
-        return ''
-
-    def archive(self, args):
-        raise NotImplementedError(type(self).__name__ + '.archive()')
-
-
-class ArchiverTar(BaseArchiver):
-    exts = ['tar']
-    utils = ['tar']
-
-    def archive(self, args):
-        target_file = args.source_file + '.tar'
-
-        cmd = ['tar', 'cvf', target_file, args.source_file]
-        print_cmd(cmd)
-
-        if not args.dry:
-            p = sub.run(cmd)
-            return p.returncode == 0
-
-
-class ArchiverBz2(BaseArchiver):
-    exts = ('tar.bz', 'tbz', 'tar.bz2', 'tbz2', 'bz', 'bz2')
-    utils = ['tar']
-
-    @classmethod
-    def archive(self, args):
-        target_file = args.source_file + '.' + args.fmt
-
-        cmd = ['tar', 'jcvf', target_file, args.source_file]
-        print_cmd(cmd)
-
-        if not args.dry:
-            p = sub.run(cmd)
-            return (p.returncode == 0)
-
-
-class ArchiverGzip(BaseArchiver):
-    exts = ('tar.gz', 'tgz', 'gz')
-    utils = ['tar']
-
-    @classmethod
-    def archive(self, args):
-        target_file = args.source_file + '.' + args.fmt
-
-        cmd = ['tar', 'zcvf', target_file, args.source_file]
-        print_cmd(cmd)
-
-        if not args.dry:
-            p = sub.run(cmd)
-            return (p.returncode == 0)
-
-
-class ArchiverZ(BaseArchiver):
-    exts = ('tar.Z', 'Z')
-    utils = ['compress']
-
-    @classmethod
-    def archive(self, args):
-        source_file = args.source_file
-        target_file = None
-        action = None
-
-        if args.fmt == 'Z':
-            if isdir(args.source_file):
-                log_error('[ArchiverZ]', 'Format Z does not support directory')
-                return False
-
-            target_file = source_file + '.' + args.fmt
-            action = 'Z'
-
-        elif args.fmt == 'tar.Z':
-            action = 'Z' if source_file.endswith('.tar') else 'tar.Z'
-            target_file = source_file + '.' + action
-
-        else:
-            log_error('[ArchiverZ]', 'Unexpected fmt:', args.fmt)
-            return False
-
-        if exists(target_file):
-            log_error('[ArchiverZ]', 'File already exists:', '[' + magenta(target_file) + ']')
-            return False
-
-        if action == 'Z':
-            cmd = ['compress', '-c', '-']
-            print_cmd(['cat', source_file] + ['|'] + cmd + ['>', target_file])
-
-            if not args.dry:
-                with open(source_file, 'rb') as sf:
-                    with open(target_file, 'wb') as tf:
-                        p = sub.Popen(cmd, stdin=sf, stdout=tf)
-                        p.wait()
-                        return (p.returncode == 0)
-
-        elif action == 'tar.Z':
-            cmd_tar = ['tar', 'cvf', '-', source_file]
-            cmd_z = ['compress', '-c', '-']
-
-            print_cmd(cmd_tar + ['|'] + cmd_z + ['>', target_file])
-
-            if not args.dry:
-                with open(target_file, 'wb') as tf:
-                    p1 = sub.Popen(cmd_tar, stdout=sub.PIPE)
-                    p2 = sub.Popen(cmd_z, stdin=p1.stdout, stdout=tf)
-                    p1.stdout.close()
-
-                    p1.wait()
-                    p2.wait()
-
-                    return (p1.returncode == 0) and (p2.returncode == 0)
-
-        else:
-            log_error('[ArchiverZ]', 'Unexpected action:', action)
-            return False
-
-        return False
-
-
-class ArchiverXZ(BaseArchiver):
-    exts = ('tar.xz', 'xz')
-    utils = ['xz']
-
-    @classmethod
-    def archive(self, args):
-        source_file = args.source_file
-        target_file = None
-        action = None
-
-        if args.fmt == 'xz':
-            if isdir(args.source_file):
-                log_error('[ArchiverXZ]', 'Format Z does not support directory')
-                return False
-
-            target_file = source_file + '.' + args.fmt
-            action = 'xz'
-
-        elif args.fmt == 'tar.xz':
-            action = 'xz' if source_file.endswith('.tar') else 'tar.xz'
-            target_file = source_file + '.' + action
-
-        else:
-            log_error('[ArchiverXZ]', 'Unexpected fmt:', args.fmt)
-            return False
-
-        if exists(target_file):
-            log_error('[ArchiverXZ]', 'File already exists:', '[' + magenta(target_file) + ']')
-            return False
-
-        if action == 'xz':
-            cmd = ['xz', '--stdout']
-            print_cmd(['cat', source_file] + ['|'] + cmd + ['>', target_file])
-
-            if not args.dry:
-                with open(source_file, 'rb') as sf:
-                    with open(target_file, 'wb') as tf:
-                        p = sub.Popen(cmd, stdin=sf, stdout=tf)
-                        p.wait()
-                        return (p.returncode == 0)
-
-        elif action == 'tar.xz':
-            cmd_tar = ['tar', 'cvf', '-', source_file]
-            cmd_z = ['xz', '-']
-
-            print_cmd(cmd_tar + ['|'] + cmd_z + ['>', target_file])
-
-            if not args.dry:
-                with open(target_file, 'wb') as tf:
-                    p1 = sub.Popen(cmd_tar, stdout=sub.PIPE)
-                    p2 = sub.Popen(cmd_z, stdin=p1.stdout, stdout=tf)
-                    p1.stdout.close()
-
-                    p1.wait()
-                    p2.wait()
-
-                    return (p1.returncode == 0) and (p2.returncode == 0)
-
-        else:
-            log_error('[ArchiverXZ]', 'Unexpected action:', action)
-            return False
-
-        return False
-
-
-# Initiate archiver classes
-archiver_list = list(map(lambda x: x(), [
-        ArchiverTar,
-        ArchiverBz2,
-        ArchiverGzip,
-        ArchiverZ,
-        ArchiverXZ,
-        ]))
-
-
-
 def usage():
     print_stderr('Usage:')
     print_stderr('  pack [-h|--help]')
@@ -267,7 +65,6 @@ def usage():
     print_stderr()
     print_stderr('Supported formats:')
 
-    # argparse.epilog?
     for x in archiver_list:
         print_stderr('  ' + ' / '.join(x.exts) + ('' if not x.lacked_utils else ' (not available: need ' + ', '.join(x.lacked_utils) + ')'))
 
@@ -339,7 +136,6 @@ def main():
     args = parse_args(sys.argv[1:])
     log('WIP')
     log(args)
-    exit(0)
 
     def why(x):
         if x.lacked_utils:
@@ -355,6 +151,8 @@ def main():
         log('[args]', 'source_file', '=', '[' + magenta(args.source_file) + ']')
         for x in archiver_list:
             log('[status]', type(x).__name__ + '.available =', not x.lacked_utils, why(x))
+
+    exit(0)
 
     global dry
     dry = args.dry
