@@ -23,7 +23,7 @@ archiver_name_list = [
 
 # Initiate archiver classes
 archiver_list = [
-        getattr(importlib.import_module('.' + archiver, package='pack'), archiver)()
+        importlib.import_module('.' + archiver, package='pack')
         for archiver in archiver_name_list
         ]
 
