@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import importlib
 import os
 import shlex
 import subprocess as sub
@@ -10,22 +9,7 @@ from os.path import isfile, isdir, exists, splitext
 from types import SimpleNamespace
 
 from .utils import *
-
-
-archiver_name_list = [
-        'archiver_tar',
-        'archiver_bz2',
-        'archiver_gzip',
-        'archiver_z',
-        'archiver_xz',
-        ]
-
-
-# Initiate archiver classes
-archiver_list = [
-        importlib.import_module('.' + archiver, package='pack')
-        for archiver in archiver_name_list
-        ]
+from . import archiver_loader
 
 
 dry = False
@@ -134,8 +118,6 @@ def parse_args(args):
 
 def main():
     args = parse_args(sys.argv[1:])
-    log('WIP')
-    log(args)
 
     def why(x):
         if x.lacked_utils:
@@ -149,10 +131,8 @@ def main():
         log('[args]', 'del_source_file', '=', args.del_source_file)
         log('[args]', 'fmt', '=', '[' + magenta(args.fmt) + ']')
         log('[args]', 'source_file', '=', '[' + magenta(args.source_file) + ']')
-        for x in archiver_list:
-            log('[status]', type(x).__name__ + '.available =', not x.lacked_utils, why(x))
-
-    exit(0)
+        for x in archiver_loader.archiver_list():
+            log(x.name + '.available =', not x.lacked_utils, why(x))
 
     global dry
     dry = args.dry
@@ -160,7 +140,7 @@ def main():
     # Call corresponding archiver to handle
     archiver = (list(filter(
         lambda x: (args.fmt in x.exts),
-        archiver_list
+        archiver_loader.archiver_list()
         )) + [None])[0]
 
     if not archiver or archiver.lacked_utils:

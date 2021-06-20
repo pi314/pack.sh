@@ -1,16 +1,15 @@
-from .archiver_base import *
+
+exts = ['tar']
+
+utils = ['tar']
 
 
-class archiver_tar(BaseArchiver):
-    exts = ['tar']
-    utils = ['tar']
+def archive(self, args):
+    target_file = args.source_file + '.tar'
 
-    def archive(self, args):
-        target_file = args.source_file + '.tar'
+    cmd = ['tar', 'cvf', target_file, args.source_file]
+    print_cmd(cmd)
 
-        cmd = ['tar', 'cvf', target_file, args.source_file]
-        print_cmd(cmd)
-
-        if not args.dry:
-            p = sub.run(cmd)
-            return p.returncode == 0
+    if not args.dry:
+        p = sub.run(cmd)
+        return p.returncode == 0
