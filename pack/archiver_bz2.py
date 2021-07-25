@@ -4,12 +4,12 @@ exts = ('tar.bz', 'tbz', 'tar.bz2', 'tbz2', 'bz', 'bz2')
 utils = ['tar']
 
 
-def archive(self, args):
+def archive(args):
     target_file = args.source_file + '.' + args.fmt
 
-    cmd = ['tar', 'jcvf', target_file, args.source_file]
-    print_cmd(cmd)
+    pipeline = Pipeline(
+            ['tar', 'jcvf', target_file, args.source_file],
+            dry=args.dry)
+    pipeline.print_cmd()
 
-    if not args.dry:
-        p = sub.run(cmd)
-        return (p.returncode == 0)
+    return pipeline.run()

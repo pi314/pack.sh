@@ -1,10 +1,14 @@
+from os.path import isdir, exists
+
+from .utils import Pipeline, FileRedirect
+
 
 exts = ('tar.Z', 'Z')
 
 utils = ['compress']
 
 
-def archive(self, args):
+def archive(args):
     source_file = args.source_file
     target_file = None
     action = None
@@ -30,32 +34,24 @@ def archive(self, args):
         return False
 
     if action == 'Z':
-        cmd = ['compress', '-c', '-']
-        print_cmd(['cat', source_file] + ['|'] + cmd + ['>', target_file])
+        pipeline = Pipeline(
+                FileRedirect(source_file),
+                ['compress', '-c', '-'],
+                FileRedirect(target_file),
+                dry=args.dry)
+        pipeline.print_cmd()
 
-        if not args.dry:
-            with open(source_file, 'rb') as sf:
-                with open(target_file, 'wb') as tf:
-                    p = sub.Popen(cmd, stdin=sf, stdout=tf)
-                    p.wait()
-                    return (p.returncode == 0)
+        return pipeline.run()
 
     elif action == 'tar.Z':
-        cmd_tar = ['tar', 'cvf', '-', source_file]
-        cmd_z = ['compress', '-c', '-']
+        pipeline = Pipeline(
+                ['tar', 'cvf', '-', source_file],
+                ['compress', '-c', '-'],
+                FileRedirect(target_file),
+                dry=args.dry)
+        pipeline.print_cmd()
 
-        print_cmd(cmd_tar + ['|'] + cmd_z + ['>', target_file])
-
-        if not args.dry:
-            with open(target_file, 'wb') as tf:
-                p1 = sub.Popen(cmd_tar, stdout=sub.PIPE)
-                p2 = sub.Popen(cmd_z, stdin=p1.stdout, stdout=tf)
-                p1.stdout.close()
-
-                p1.wait()
-                p2.wait()
-
-                return (p1.returncode == 0) and (p2.returncode == 0)
+        return pipeline.run()
 
     else:
         log_error('[archiver_z]', 'Unexpected action:', action)

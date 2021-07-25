@@ -8,8 +8,12 @@ if sys.version_info.major < 3:
     exit(1)
 
 
+def test_pack_tar():
+    ...
+
+
 def main():
-    pass
+    test_pack_tar()
 
 
 if __name__ == '__main__':
