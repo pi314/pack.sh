@@ -49,7 +49,7 @@ def usage():
     print_stderr()
     print_stderr('Supported formats:')
 
-    for x in archiver_list:
+    for x in archiver_loader.archiver_list():
         print_stderr('  ' + ' / '.join(x.exts) + ('' if not x.lacked_utils else ' (not available: need ' + ', '.join(x.lacked_utils) + ')'))
 
     print_stderr()
