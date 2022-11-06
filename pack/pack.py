@@ -111,7 +111,7 @@ def parse_args(args):
     ret.dry = dry
     ret.del_source_file = del_source_file
     ret.fmt = fmt.lstrip('.')
-    ret.source_file = source_file
+    ret.source_file = source_file.rstrip('/')
 
     return ret
 
